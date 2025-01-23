@@ -21,6 +21,9 @@ df = None
 if uploaded_file:
     # Leer archivo
     df = pd.read_csv(uploaded_file)
+    dfp = df.copy()
+    # Reemplazar valores numéricos en la columna 'SEXO'
+    df['SEXO'] = df['SEXO'].replace({1: 'Hombre', 2: 'Mujer'})
 
     # Diseño de KPI's
     st.markdown("## Métricas Clave")
@@ -40,7 +43,7 @@ if uploaded_file:
 
     # Análisis de datos
     st.markdown("## Análisis de Datos")
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
 
     with col1:
         x_var = st.selectbox("Selecciona la variable X", df.columns)
@@ -61,6 +64,15 @@ if uploaded_file:
         ax.grid(True, linestyle="--", alpha=0.7)
         st.pyplot(fig)
 
+    with col3:
+        st.write("### Comparación por sexo")
+        if 'SEXO' in df.columns:
+            compare_var = st.selectbox("Selecciona la variable a comparar", df.columns)
+            fig, ax = plt.subplots(figsize=(8, 6))
+            sns.boxplot(x='SEXO', y=compare_var, data=df, ax=ax)
+            ax.grid(True, linestyle="--", alpha=0.7)
+            st.pyplot(fig)
+
     # Filtro de edad
     if 'EDAD' in df.columns:
         st.sidebar.title("Filtros por Edad")
@@ -73,12 +85,12 @@ if uploaded_file:
 
     # Modelo predictivo
     st.sidebar.title("Predicción de envejecimiento metabólico")
-    missing_columns = [col for col in selected_features if col not in df.columns]
+    missing_columns = [col for col in selected_features if col not in dfp.columns]
     if missing_columns:
         st.error(f"El dataset no contiene las columnas requeridas: {missing_columns}")
     else:
-        X = df[selected_features]
-        y = df["ENV"] if "ENV" in df.columns else None
+        X = dfp[selected_features]
+        y = dfp["ENV"] if "ENV" in df.columns else None
         
         if y is not None:
             # Preprocesamiento para manejar NaN
@@ -90,7 +102,7 @@ if uploaded_file:
             model = LinearRegression()
             model.fit(X, y)
 
-            st.sidebar.subheader("Ingrese los valores de las variables predictoras")
+            st.sidebar.subheader("Ingrese los valores de las variables predictoras (1: hombre, 2: mujer)")
             input_data = []
 
             for feature in selected_features:
@@ -103,15 +115,11 @@ if uploaded_file:
                     prediction = model.predict(input_array)[0]
                     result = "MUY PROBABLE" if abs(prediction - 1) < abs(prediction - 0) else "POCO PROBABLE"
                     st.write(f"### Predicción de Envejecimiento Metabólico: ({prediction:.2f}) {result}")
-                    #st.write(f"### Predicción de Envejecimiento Metabólico: {prediction:.2f}")
                 except Exception as e:
                     st.error(f"Ha ocurrido un error en la predicción: {e}") 
                     
         else:
             st.warning("La columna 'Edad Metabólica' no está disponible en el dataset.")
 
-
 else:
     st.info("Por favor, sube un archivo CSV para comenzar.")
-
-
